@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Month Slot Selector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #10142b; --bg-alt: #171d3c; --ink-soft: #6b6f8c;
+  --text: #eee9f5; --text-soft: #a9adc9;
+  --gold: #e7b34e; --stamp: #c1443c; --ring: rgba(231,179,78,0.35);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; font-family: 'Inter', sans-serif; background: var(--bg);
+  background-image: radial-gradient(circle at 15% 10%, var(--bg-alt), transparent 45%),
+                     radial-gradient(circle at 85% 90%, var(--bg-alt), transparent 45%);
+  color: var(--text);
+}
+.container { max-width: 680px; margin: auto; padding: 40px 20px 60px; }
+.eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.28em; color: var(--gold); margin-bottom: 10px; }
+h1.title { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(1.6rem, 5vw, 2.2rem); margin: 0 0 24px; }
+.card { background: var(--bg-alt); border: 1px solid var(--ring); border-radius: 16px; padding: 26px 24px; margin: 22px 0; }
+.card h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.1rem; margin: 0 0 4px; }
+.card .card-caption { color: var(--text-soft); font-size: 0.85rem; margin: 0 0 18px; }
+.lock-row { display: flex; gap: 10px; align-items: flex-end; }
+input {
+  width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--ring);
+  outline: none; background: rgba(255,255,255,0.04); color: var(--text); font-size: 0.95rem;
+}
+input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--ring); }
+button.btn {
+  padding: 13px 18px; border-radius: 10px; border: none; background: var(--gold); color: #201703;
+  font-weight: 600; font-size: 0.95rem; cursor: pointer; white-space: nowrap;
+}
+button.btn.danger { background: var(--stamp); color: #fff; }
+button.btn.ghost { background: transparent; border: 1px solid var(--ring); color: var(--text); }
+.notice { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; padding: 10px 12px; border-radius: 8px; margin-top: 12px; display: none; }
+.notice.show { display: block; }
+.notice.error { background: rgba(193,68,60,0.12); color: var(--stamp); border: 1px solid rgba(193,68,60,0.3); }
+.notice.info { background: rgba(231,179,78,0.12); color: var(--gold); border: 1px solid var(--ring); }
+.hidden { display: none !important; }
+table { width: 100%; border-collapse: collapse; margin-top: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; }
+th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--ring); }
+th { color: var(--gold); font-weight: 500; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
+tbody tr:hover { background: rgba(231,179,78,0.06); }
+.empty-row td { text-align: center; color: var(--text-soft); font-family: 'Inter', sans-serif; padding: 22px 0; }
+.top-row { display: flex; justify-content: space-between; align-items: center; }
+@media (max-width: 480px) { .lock-row { flex-direction: column; align-items: stretch; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="eyebrow">ADMIN ONLY</div>
+  <h1 class="title">Registrations</h1>
+
+  <div id="lockCard" class="card">
+    <h2>Enter admin key</h2>
+    <p class="card-caption">This page isn't linked from the public site — keep the URL private.</p>
+    <div class="lock-row">
+      <input id="adminKey" type="password" placeholder="Admin key" onkeydown="if(event.key==='Enter') unlock()">
+      <button class="btn" onclick="unlock()">Unlock</button>
+    </div>
+    <div class="notice error" id="lockNotice"></div>
+  </div>
+
+  <div id="panel" class="card hidden">
+    <div class="top-row">
+      <div>
+        <h2>Registered users</h2>
+        <p class="card-caption" id="countLine">—</p>
+      </div>
+      <button class="btn ghost" onclick="loadData()">Refresh</button>
+    </div>
+    <table>
+      <thead><tr><th>Slot</th><th>Name</th><th>Phone</th><th>Month</th></tr></thead>
+      <tbody id="adminTable"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
+    </table>
+    <button class="btn danger" style="width:100%; margin-top:22px;" onclick="resetSystem()">Reset system (delete all)</button>
+    <div class="notice info" id="panelNotice"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const ADMIN_KEY = "ADMIN123"; // change this to your own key
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const lockCard = document.getElementById("lockCard");
+const panel = document.getElementById("panel");
+const adminKey = document.getElementById("adminKey");
+const lockNotice = document.getElementById("lockNotice");
+const panelNotice = document.getElementById("panelNotice");
+const adminTable = document.getElementById("adminTable");
+const countLine = document.getElementById("countLine");
+
+function flash(el, msg, cls) {
+  el.textContent = msg;
+  el.className = "notice show " + cls;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), 3200);
+}
+
+function unlock() {
+  if (adminKey.value === ADMIN_KEY) {
+    lockCard.classList.add("hidden");
+    panel.classList.remove("hidden");
+    adminKey.value = "";
+    loadData();
+  } else {
+    flash(lockNotice, "Wrong admin key.", "error");
+  }
+}
+
+async function loadData() {
+  const { data, error } = await supabase
+    .from("registrations")
+    .select("*")
+    .order("slot", { ascending: true });
+
+  if (error) {
+    flash(panelNotice, "Couldn't load data.", "error");
+    console.error(error);
+    return;
+  }
+
+  countLine.textContent = `${data.length} of 30 slots filled`;
+
+  if (data.length === 0) {
+    adminTable.innerHTML = `<tr class="empty-row"><td colspan="4">No registrations yet.</td></tr>`;
+    return;
+  }
+  adminTable.innerHTML = data.map(u => `
+    <tr>
+      <td>${u.slot}</td>
+      <td>${u.name}</td>
+      <td>${u.phone}</td>
+      <td>${u.month}</td>
+    </tr>`).join("");
+}
+
+async function resetSystem() {
+  if (!confirm("Delete every registration? This can't be undone.")) return;
+  const { error } = await supabase.from("registrations").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  if (error) {
+    flash(panelNotice, "Couldn't reset — check console.", "error");
+    console.error(error);
+    return;
+  }
+  flash(panelNotice, "System reset.", "info");
+  loadData();
+}
+</script>
+</body>
+</html>

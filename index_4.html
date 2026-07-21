@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Month Slot Selector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #10142b;
+  --bg-alt: #171d3c;
+  --paper: #f7efe0;
+  --paper-line: #d8c9a3;
+  --ink: #211d2c;
+  --ink-soft: #6b6f8c;
+  --text: #eee9f5;
+  --text-soft: #a9adc9;
+  --gold: #e7b34e;
+  --gold-deep: #b8862c;
+  --stamp: #c1443c;
+  --ring: rgba(231,179,78,0.35);
+  --taken: #3a3f5c;
+}
+
+.light {
+  --bg: #f7efe0;
+  --bg-alt: #efe4cc;
+  --paper: #ffffff;
+  --paper-line: #d8c9a3;
+  --ink: #211d2c;
+  --ink-soft: #6b6f8c;
+  --text: #211d2c;
+  --text-soft: #665f78;
+  --gold: #b8862c;
+  --gold-deep: #8f6620;
+  --stamp: #b23a33;
+  --ring: rgba(184,134,44,0.3);
+  --taken: #e3dbc7;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 15% 10%, var(--bg-alt), transparent 45%),
+    radial-gradient(circle at 85% 90%, var(--bg-alt), transparent 45%);
+  color: var(--text);
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+.container { max-width: 640px; margin: auto; padding: 28px 20px 60px; }
+
+.topbar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+
+.theme-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--ring); background: transparent; color: var(--text);
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.06em;
+  cursor: pointer; transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.theme-toggle:hover { border-color: var(--gold); transform: translateY(-1px); }
+
+header.hero { text-align: center; margin: 18px 0 34px; }
+
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+  letter-spacing: 0.28em; color: var(--gold); margin-bottom: 10px;
+}
+
+h1.title {
+  font-family: 'Fraunces', serif; font-optical-sizing: auto; font-weight: 600;
+  font-size: clamp(1.8rem, 5vw, 2.6rem); margin: 0 0 10px; letter-spacing: -0.01em;
+}
+
+.subhead { color: var(--text-soft); font-size: 0.95rem; max-width: 380px; margin: 0 auto; }
+
+.divider {
+  width: 100%; height: 1px; margin: 30px 0;
+  background-image: repeating-linear-gradient(to right, var(--ring) 0 8px, transparent 8px 16px);
+}
+
+.card {
+  background: var(--bg-alt); border: 1px solid var(--ring); border-radius: 16px;
+  padding: 26px 24px; margin: 22px 0; animation: fadeUp 0.6s ease;
+}
+.light .card { background: #fffdf8; box-shadow: 0 12px 30px rgba(33,29,44,0.06); }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+.card h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem; margin: 0 0 4px; }
+.card .card-caption { color: var(--text-soft); font-size: 0.85rem; margin: 0 0 18px; }
+
+.slot-count {
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--gold);
+  margin-bottom: 16px;
+}
+
+label.field-label {
+  display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.08em; color: var(--text-soft); margin: 14px 0 6px;
+}
+
+input {
+  width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--ring);
+  outline: none; background: rgba(255,255,255,0.04); color: var(--text);
+  font-size: 0.95rem; font-family: 'Inter', sans-serif;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.light input { background: var(--paper-alt, #efe4cc); }
+input::placeholder { color: var(--text-soft); opacity: 0.7; }
+input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--ring); }
+
+button.btn {
+  width: 100%; padding: 14px; margin-top: 18px; border-radius: 10px; border: none;
+  background: var(--gold); color: #201703; font-weight: 600; font-size: 0.95rem; cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+}
+button.btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(231,179,78,0.28); }
+button.btn:active:not(:disabled) { transform: translateY(0); }
+button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button.btn.ghost { background: transparent; border: 1px solid var(--ring); color: var(--text); }
+
+.notice {
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; padding: 10px 12px;
+  border-radius: 8px; margin-top: 12px; display: none;
+}
+.notice.show { display: block; animation: fadeUp 0.3s ease; }
+.notice.error { background: rgba(193,68,60,0.12); color: var(--stamp); border: 1px solid rgba(193,68,60,0.3); }
+.notice.info  { background: rgba(231,179,78,0.12); color: var(--gold); border: 1px solid var(--ring); }
+
+.hidden { display: none !important; }
+
+/* SLOT GRID */
+.slot-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 16px 0 6px;
+}
+.slot-btn {
+  aspect-ratio: 1; border-radius: 8px; border: 1px solid var(--ring);
+  background: transparent; color: var(--text); font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease;
+}
+.slot-btn:hover:not(:disabled) { border-color: var(--gold); transform: translateY(-1px); }
+.slot-btn.selected { background: var(--gold); color: #201703; border-color: var(--gold); }
+.slot-btn:disabled {
+  background: var(--taken); color: var(--text-soft); border-color: transparent;
+  cursor: not-allowed; text-decoration: line-through; opacity: 0.6;
+}
+@media (max-width: 420px) { .slot-grid { grid-template-columns: repeat(5, 1fr); } }
+
+/* TICKET */
+.ticket-wrap { margin: 22px 0; }
+.ticket {
+  position: relative; display: grid; grid-template-columns: 1fr auto;
+  background: var(--paper); color: var(--ink); border-radius: 14px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.35); overflow: visible;
+  animation: ticketIn 0.7s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes ticketIn { from { opacity: 0; transform: translateY(24px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.ticket::before, .ticket::after {
+  content: ""; position: absolute; width: 26px; height: 26px; background: var(--bg);
+  border-radius: 50%; top: 50%; transform: translateY(-50%); transition: background 0.4s ease;
+}
+.ticket::before { left: -13px; }
+.ticket::after { right: -13px; }
+.ticket-main { padding: 26px 22px; }
+.ticket-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.2em; color: var(--gold-deep); margin-bottom: 6px; }
+.ticket-month { font-family: 'Fraunces', serif; font-weight: 700; font-size: clamp(1.8rem, 6vw, 2.4rem); line-height: 1.05; margin: 0 0 10px; }
+.ticket-name { font-size: 0.92rem; color: var(--ink-soft); }
+.ticket-name b { color: var(--ink); font-weight: 600; }
+.ticket-stub {
+  position: relative; padding: 26px 20px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; border-left: 2px dashed var(--paper-line); min-width: 108px;
+}
+.ticket-stub .stub-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; color: var(--ink-soft); margin-bottom: 6px; }
+.ticket-stub .stub-num { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 600; }
+.stamp {
+  position: absolute; top: 14px; right: 18px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; color: var(--stamp); border: 2px solid var(--stamp);
+  border-radius: 6px; padding: 4px 8px; transform: rotate(-9deg); opacity: 0;
+  animation: stampIn 0.4s ease 0.5s forwards;
+}
+@keyframes stampIn { from { opacity: 0; transform: rotate(-9deg) scale(1.6); } to { opacity: 0.85; transform: rotate(-9deg) scale(1); } }
+@media (max-width: 480px) {
+  .ticket { grid-template-columns: 1fr; }
+  .ticket-stub { border-left: none; border-top: 2px dashed var(--paper-line); flex-direction: row; gap: 10px; }
+}
+
+.spinner {
+  width: 22px; height: 22px; border: 2px solid var(--ring); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="topbar">
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">☾ DARK</button>
+  </div>
+
+  <header class="hero">
+    <div class="eyebrow">MONTHLY DRAW SYSTEM</div>
+    <h1 class="title">Month Slot Selector</h1>
+    <p class="subhead">Reserve a slot number. The draw hands you back your month.</p>
+  </header>
+
+  <div id="userForm" class="card">
+    <h2>Reserve your slot</h2>
+    <p class="card-caption">Tap an open slot below, fill in your details, then draw.</p>
+    <div class="slot-count" id="slotCount">Loading slots…</div>
+
+    <div class="slot-grid" id="slotGrid"></div>
+
+    <label class="field-label">FULL NAME</label>
+    <input id="name" placeholder="e.g. Ada Obi">
+
+    <label class="field-label">PHONE NUMBER</label>
+    <input id="phone" placeholder="e.g. 0803 000 0000">
+
+    <button class="btn" id="submitBtn" onclick="assignMonth()">Draw my month</button>
+    <div class="notice error" id="formNotice"></div>
+  </div>
+
+  <div id="result" class="ticket-wrap hidden">
+    <div class="ticket">
+      <div class="stamp">CONFIRMED</div>
+      <div class="ticket-main">
+        <div class="ticket-eyebrow">MONTH ASSIGNED</div>
+        <div class="ticket-month" id="resultMonth"></div>
+        <div class="ticket-name">Registered to <b id="resultName"></b></div>
+      </div>
+      <div class="ticket-stub">
+        <div class="stub-label">SLOT</div>
+        <div class="stub-num" id="resultSlot"></div>
+      </div>
+    </div>
+    <button class="btn ghost" style="margin-top:16px;" onclick="resetForm()">Register another</button>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============ CONFIG ============ */
+const SUPABASE_URL = "YOUR_SUPABASE_URL";        // e.g. https://xxxxx.supabase.co
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const MAX_SLOTS = 30;
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ============ THEME ============ */
+function toggleTheme() {
+  document.body.classList.toggle("light");
+  const isLight = document.body.classList.contains("light");
+  themeBtn.textContent = isLight ? "☀ LIGHT" : "☾ DARK";
+}
+
+/* ============ STATE ============ */
+const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+let takenSlots = new Set();
+let selectedSlot = null;
+
+const slotGrid = document.getElementById("slotGrid");
+const slotCount = document.getElementById("slotCount");
+const nameInput = document.getElementById("name");
+const phoneInput = document.getElementById("phone");
+const submitBtn = document.getElementById("submitBtn");
+const formNotice = document.getElementById("formNotice");
+const userForm = document.getElementById("userForm");
+const result = document.getElementById("result");
+const resultMonth = document.getElementById("resultMonth");
+const resultName = document.getElementById("resultName");
+const resultSlot = document.getElementById("resultSlot");
+const themeBtn = document.getElementById("themeBtn");
+
+function flash(el, msg, cls) {
+  el.textContent = msg;
+  el.className = "notice show " + cls;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), 3800);
+}
+
+/* ============ LOAD SLOTS ============ */
+async function loadSlots() {
+  const { data, error } = await supabase.from("registrations").select("slot");
+  if (error) {
+    slotCount.textContent = "Couldn't reach the database.";
+    console.error(error);
+    return;
+  }
+  takenSlots = new Set(data.map(r => r.slot));
+  renderGrid();
+}
+
+function renderGrid() {
+  const remaining = MAX_SLOTS - takenSlots.size;
+  slotCount.textContent = remaining > 0
+    ? `${remaining} of ${MAX_SLOTS} slots still open`
+    : "All slots are taken.";
+
+  slotGrid.innerHTML = "";
+  for (let i = 1; i <= MAX_SLOTS; i++) {
+    const btn = document.createElement("button");
+    btn.className = "slot-btn";
+    btn.textContent = i;
+    btn.type = "button";
+    if (takenSlots.has(i)) {
+      btn.disabled = true;
+    } else {
+      btn.onclick = () => selectSlot(i, btn);
+    }
+    if (selectedSlot === i) btn.classList.add("selected");
+    slotGrid.appendChild(btn);
+  }
+}
+
+function selectSlot(i, btn) {
+  selectedSlot = i;
+  renderGrid();
+}
+
+/* ============ SUBMIT ============ */
+async function assignMonth() {
+  const name = nameInput.value.trim();
+  const phone = phoneInput.value.trim();
+
+  if (!name || !phone) return flash(formNotice, "Please fill in every field.", "error");
+  if (!selectedSlot) return flash(formNotice, "Please tap a slot number above.", "error");
+  if (takenSlots.has(selectedSlot)) {
+    flash(formNotice, "That slot was just taken — pick another.", "error");
+    selectedSlot = null;
+    return loadSlots();
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Drawing…";
+
+  const month = months[Math.floor(Math.random() * months.length)];
+
+  const { error } = await supabase.from("registrations").insert({
+    name, phone, slot: selectedSlot, month
+  });
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = "Draw my month";
+
+  if (error) {
+    if (error.code === "23505") {
+      flash(formNotice, "That slot was just taken — pick another.", "error");
+      selectedSlot = null;
+      loadSlots();
+    } else {
+      flash(formNotice, "Something went wrong. Please try again.", "error");
+      console.error(error);
+    }
+    return;
+  }
+
+  userForm.classList.add("hidden");
+  result.classList.remove("hidden");
+  resultMonth.textContent = month;
+  resultName.textContent = name;
+  resultSlot.textContent = selectedSlot;
+  result.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function resetForm() {
+  userForm.classList.remove("hidden");
+  result.classList.add("hidden");
+  nameInput.value = phoneInput.value = "";
+  selectedSlot = null;
+  loadSlots();
+  userForm.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+loadSlots();
+</script>
+</body>
+</html>
