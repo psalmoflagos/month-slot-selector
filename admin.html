@@ -12,14 +12,36 @@
   --text: #eee9f5; --text-soft: #a9adc9;
   --gold: #e7b34e; --stamp: #c1443c; --ring: rgba(231,179,78,0.35);
 }
+.light {
+  --bg: #f7efe0;
+  --bg-alt: #efe4cc;
+  --ink-soft: #6b6f8c;
+  --text: #211d2c;
+  --text-soft: #665f78;
+  --gold: #b8862c;
+  --stamp: #b23a33;
+  --ring: rgba(184,134,44,0.3);
+}
+.light .card { background: #fffdf8; box-shadow: 0 12px 30px rgba(33,29,44,0.06); }
+.light input { background: var(--paper-alt, #efe4cc); }
 * { box-sizing: border-box; }
 body {
   margin: 0; min-height: 100vh; font-family: 'Inter', sans-serif; background: var(--bg);
   background-image: radial-gradient(circle at 15% 10%, var(--bg-alt), transparent 45%),
                      radial-gradient(circle at 85% 90%, var(--bg-alt), transparent 45%);
   color: var(--text);
+  transition: background 0.4s ease, color 0.4s ease;
 }
 .container { max-width: 680px; margin: auto; padding: 40px 20px 60px; }
+.topbar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.theme-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--ring); background: transparent; color: var(--text);
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.06em;
+  cursor: pointer; transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.theme-toggle:hover { border-color: var(--gold); transform: translateY(-1px); }
 .eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.28em; color: var(--gold); margin-bottom: 10px; }
 h1.title { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(1.6rem, 5vw, 2.2rem); margin: 0 0 24px; }
 .card { background: var(--bg-alt); border: 1px solid var(--ring); border-radius: 16px; padding: 26px 24px; margin: 22px 0; }
@@ -53,6 +75,11 @@ tbody tr:hover { background: rgba(231,179,78,0.06); }
 </head>
 <body>
 <div class="container">
+
+  <div class="topbar">
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">☾ DARK</button>
+  </div>
+
   <div class="eyebrow">ADMIN ONLY</div>
   <h1 class="title">Registrations</h1>
 
@@ -87,31 +114,18 @@ tbody tr:hover { background: rgba(231,179,78,0.06); }
 <script>
 const SUPABASE_URL = "https://vohrzhzzsxkobnhpqnil.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_7-yF3bPfXTaRVJNEbVEueA_SdG2dq1G";
+const ADMIN_KEY = "changeme123"; // ⚠️ client-side only — not real security, see note
 const MAX_SLOTS = 30;
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function toggleTheme() {
-  document.body.classList.toggle("light");
-  const isLight = document.body.classList.contains("light");
-  themeBtn.textContent = isLight ? "☀ LIGHT" : "☾ DARK";
-}
-
-const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-let takenSlots = new Set();
-let selectedSlot = null;
-
-const slotGrid = document.getElementById("slotGrid");
-const slotCount = document.getElementById("slotCount");
-const nameInput = document.getElementById("name");
-const phoneInput = document.getElementById("phone");
-const submitBtn = document.getElementById("submitBtn");
-const formNotice = document.getElementById("formNotice");
-const userForm = document.getElementById("userForm");
-const result = document.getElementById("result");
-const resultMonth = document.getElementById("resultMonth");
-const resultName = document.getElementById("resultName");
-const resultSlot = document.getElementById("resultSlot");
+const lockCard = document.getElementById("lockCard");
+const panel = document.getElementById("panel");
+const adminKeyInput = document.getElementById("adminKey");
+const lockNotice = document.getElementById("lockNotice");
+const panelNotice = document.getElementById("panelNotice");
+const adminTable = document.getElementById("adminTable");
+const countLine = document.getElementById("countLine");
 const themeBtn = document.getElementById("themeBtn");
 
 function flash(el, msg, cls) {
@@ -121,98 +135,85 @@ function flash(el, msg, cls) {
   el._t = setTimeout(() => el.classList.remove("show"), 3800);
 }
 
-async function loadSlots() {
-  const { data, error } = await supabase.from("registrations").select("slot");
+/* ============ THEME ============ */
+function toggleTheme() {
+  document.body.classList.toggle("light");
+  const isLight = document.body.classList.contains("light");
+  themeBtn.textContent = isLight ? "☀ LIGHT" : "☾ DARK";
+}
+
+/* ============ UNLOCK ============ */
+function unlock() {
+  const entered = adminKeyInput.value.trim();
+  if (entered !== ADMIN_KEY) {
+    flash(lockNotice, "Wrong key.", "error");
+    return;
+  }
+  lockCard.classList.add("hidden");
+  panel.classList.remove("hidden");
+  loadData();
+}
+
+/* ============ LOAD DATA ============ */
+async function loadData() {
+  adminTable.innerHTML = `<tr class="empty-row"><td colspan="4">Loading…</td></tr>`;
+
+  const { data, error } = await supabase
+    .from("registrations")
+    .select("*")
+    .order("slot", { ascending: true });
+
   if (error) {
-    slotCount.textContent = "Couldn't reach the database.";
+    adminTable.innerHTML = `<tr class="empty-row"><td colspan="4">Couldn't load data.</td></tr>`;
     console.error(error);
     return;
   }
-  takenSlots = new Set(data.map(r => r.slot));
-  renderGrid();
-}
 
-function renderGrid() {
-  const remaining = MAX_SLOTS - takenSlots.size;
-  slotCount.textContent = remaining > 0
-    ? `${remaining} of ${MAX_SLOTS} slots still open`
-    : "All slots are taken.";
+  countLine.textContent = `${data.length} of ${MAX_SLOTS} slots filled`;
 
-  slotGrid.innerHTML = "";
-  for (let i = 1; i <= MAX_SLOTS; i++) {
-    const btn = document.createElement("button");
-    btn.className = "slot-btn";
-    btn.textContent = i;
-    btn.type = "button";
-    if (takenSlots.has(i)) {
-      btn.disabled = true;
-    } else {
-      btn.onclick = () => selectSlot(i, btn);
-    }
-    if (selectedSlot === i) btn.classList.add("selected");
-    slotGrid.appendChild(btn);
-  }
-}
-
-function selectSlot(i, btn) {
-  selectedSlot = i;
-  renderGrid();
-}
-
-async function assignMonth() {
-  const name = nameInput.value.trim();
-  const phone = phoneInput.value.trim();
-
-  if (!name || !phone) return flash(formNotice, "Please fill in every field.", "error");
-  if (!selectedSlot) return flash(formNotice, "Please tap a slot number above.", "error");
-  if (takenSlots.has(selectedSlot)) {
-    flash(formNotice, "That slot was just taken — pick another.", "error");
-    selectedSlot = null;
-    return loadSlots();
-  }
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Drawing…";
-
-  const month = months[Math.floor(Math.random() * months.length)];
-
-  const { error } = await supabase.from("registrations").insert({
-    name, phone, slot: selectedSlot, month
-  });
-
-  submitBtn.disabled = false;
-  submitBtn.textContent = "Draw my month";
-
-  if (error) {
-    if (error.code === "23505") {
-      flash(formNotice, "That slot was just taken — pick another.", "error");
-      selectedSlot = null;
-      loadSlots();
-    } else {
-      flash(formNotice, "Something went wrong. Please try again.", "error");
-      console.error(error);
-    }
+  if (data.length === 0) {
+    adminTable.innerHTML = `<tr class="empty-row"><td colspan="4">No registrations yet.</td></tr>`;
     return;
   }
 
-  userForm.classList.add("hidden");
-  result.classList.remove("hidden");
-  resultMonth.textContent = month;
-  resultName.textContent = name;
-  resultSlot.textContent = selectedSlot;
-  result.scrollIntoView({ behavior: "smooth", block: "center" });
+  adminTable.innerHTML = data.map(row => `
+    <tr>
+      <td>${row.slot}</td>
+      <td>${escapeHtml(row.name)}</td>
+      <td>${escapeHtml(row.phone)}</td>
+      <td>${escapeHtml(row.month)}</td>
+    </tr>
+  `).join("");
 }
 
-function resetForm() {
-  userForm.classList.remove("hidden");
-  result.classList.add("hidden");
-  nameInput.value = phoneInput.value = "";
-  selectedSlot = null;
-  loadSlots();
-  userForm.scrollIntoView({ behavior: "smooth", block: "center" });
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
 }
 
-loadSlots();
+/* ============ RESET ============ */
+async function resetSystem() {
+  const sure = confirm("This will permanently delete ALL registrations. Are you sure?");
+  if (!sure) return;
+
+  const typed = prompt('Type "DELETE" to confirm.');
+  if (typed !== "DELETE") {
+    flash(panelNotice, "Reset cancelled.", "info");
+    return;
+  }
+
+  const { error } = await supabase.from("registrations").delete().neq("slot", -1);
+
+  if (error) {
+    flash(panelNotice, "Failed to reset. Check console.", "error");
+    console.error(error);
+    return;
+  }
+
+  flash(panelNotice, "All registrations deleted.", "info");
+  loadData();
+}
 </script>
 </body>
 </html>
