@@ -138,7 +138,6 @@ button.btn.ghost { background: transparent; border: 1px solid var(--ring); color
 
 .hidden { display: none !important; }
 
-/* SLOT GRID */
 .slot-grid {
   display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 16px 0 6px;
 }
@@ -157,7 +156,6 @@ button.btn.ghost { background: transparent; border: 1px solid var(--ring); color
 }
 @media (max-width: 420px) { .slot-grid { grid-template-columns: repeat(5, 1fr); } }
 
-/* TICKET */
 .ticket-wrap { margin: 22px 0; }
 .ticket {
   position: relative; display: grid; grid-template-columns: 1fr auto;
@@ -253,139 +251,142 @@ button.btn.ghost { background: transparent; border: 1px solid var(--ring); color
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ============ CONFIG ============ */
-const SUPABASE_URL = "https://vohrzhzzsxkobnhpqnil.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_7-yF3bPfXTaRVJNEbVEueA_SdG2dq1G";
-const MAX_SLOTS = 30;
+(function() {
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const SUPABASE_URL = "https://vohrzhzzsxkobnhpqnil.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_7-yF3bPfXTaRVJNEbVEueA_SdG2dq1G";
+  const MAX_SLOTS = 30;
 
-/* ============ THEME ============ */
-function toggleTheme() {
-  document.body.classList.toggle("light");
-  const isLight = document.body.classList.contains("light");
-  themeBtn.textContent = isLight ? "☀ LIGHT" : "☾ DARK";
-}
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ============ STATE ============ */
-const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-let takenSlots = new Set();
-let selectedSlot = null;
-
-const slotGrid = document.getElementById("slotGrid");
-const slotCount = document.getElementById("slotCount");
-const nameInput = document.getElementById("name");
-const phoneInput = document.getElementById("phone");
-const submitBtn = document.getElementById("submitBtn");
-const formNotice = document.getElementById("formNotice");
-const userForm = document.getElementById("userForm");
-const result = document.getElementById("result");
-const resultMonth = document.getElementById("resultMonth");
-const resultName = document.getElementById("resultName");
-const resultSlot = document.getElementById("resultSlot");
-const themeBtn = document.getElementById("themeBtn");
-
-function flash(el, msg, cls) {
-  el.textContent = msg;
-  el.className = "notice show " + cls;
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove("show"), 3800);
-}
-
-/* ============ LOAD SLOTS ============ */
-async function loadSlots() {
-  const { data, error } = await supabase.from("registrations").select("slot");
-  if (error) {
-    slotCount.textContent = "Couldn't reach the database.";
-    console.error(error);
-    return;
+  function toggleTheme() {
+    document.body.classList.toggle("light");
+    const isLight = document.body.classList.contains("light");
+    themeBtn.textContent = isLight ? "☀ LIGHT" : "☾ DARK";
   }
-  takenSlots = new Set(data.map(r => r.slot));
-  renderGrid();
-}
 
-function renderGrid() {
-  const remaining = MAX_SLOTS - takenSlots.size;
-  slotCount.textContent = remaining > 0
-    ? `${remaining} of ${MAX_SLOTS} slots still open`
-    : "All slots are taken.";
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  let takenSlots = new Set();
+  let selectedSlot = null;
 
-  slotGrid.innerHTML = "";
-  for (let i = 1; i <= MAX_SLOTS; i++) {
-    const btn = document.createElement("button");
-    btn.className = "slot-btn";
-    btn.textContent = i;
-    btn.type = "button";
-    if (takenSlots.has(i)) {
-      btn.disabled = true;
-    } else {
-      btn.onclick = () => selectSlot(i, btn);
+  const slotGrid = document.getElementById("slotGrid");
+  const slotCount = document.getElementById("slotCount");
+  const nameInput = document.getElementById("name");
+  const phoneInput = document.getElementById("phone");
+  const submitBtn = document.getElementById("submitBtn");
+  const formNotice = document.getElementById("formNotice");
+  const userForm = document.getElementById("userForm");
+  const result = document.getElementById("result");
+  const resultMonth = document.getElementById("resultMonth");
+  const resultName = document.getElementById("resultName");
+  const resultSlot = document.getElementById("resultSlot");
+  const themeBtn = document.getElementById("themeBtn");
+
+  function flash(el, msg, cls) {
+    el.textContent = msg;
+    el.className = "notice show " + cls;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove("show"), 3800);
+  }
+
+  async function loadSlots() {
+    const { data, error } = await supabase.from("registrations").select("slot");
+    if (error) {
+      slotCount.textContent = "Couldn't reach the database.";
+      console.error(error);
+      return;
     }
-    if (selectedSlot === i) btn.classList.add("selected");
-    slotGrid.appendChild(btn);
-  }
-}
-
-function selectSlot(i, btn) {
-  selectedSlot = i;
-  renderGrid();
-}
-
-/* ============ SUBMIT ============ */
-async function assignMonth() {
-  const name = nameInput.value.trim();
-  const phone = phoneInput.value.trim();
-
-  if (!name || !phone) return flash(formNotice, "Please fill in every field.", "error");
-  if (!selectedSlot) return flash(formNotice, "Please tap a slot number above.", "error");
-  if (takenSlots.has(selectedSlot)) {
-    flash(formNotice, "That slot was just taken — pick another.", "error");
-    selectedSlot = null;
-    return loadSlots();
+    takenSlots = new Set(data.map(r => r.slot));
+    renderGrid();
   }
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Drawing…";
+  function renderGrid() {
+    const remaining = MAX_SLOTS - takenSlots.size;
+    slotCount.textContent = remaining > 0
+      ? `${remaining} of ${MAX_SLOTS} slots still open`
+      : "All slots are taken.";
 
-  const month = months[Math.floor(Math.random() * months.length)];
+    slotGrid.innerHTML = "";
+    for (let i = 1; i <= MAX_SLOTS; i++) {
+      const btn = document.createElement("button");
+      btn.className = "slot-btn";
+      btn.textContent = i;
+      btn.type = "button";
+      if (takenSlots.has(i)) {
+        btn.disabled = true;
+      } else {
+        btn.onclick = () => selectSlot(i, btn);
+      }
+      if (selectedSlot === i) btn.classList.add("selected");
+      slotGrid.appendChild(btn);
+    }
+  }
 
-  const { error } = await supabase.from("registrations").insert({
-    name, phone, slot: selectedSlot, month
-  });
+  function selectSlot(i, btn) {
+    selectedSlot = i;
+    renderGrid();
+  }
 
-  submitBtn.disabled = false;
-  submitBtn.textContent = "Draw my month";
+  async function assignMonth() {
+    const name = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
 
-  if (error) {
-    if (error.code === "23505") {
+    if (!name || !phone) return flash(formNotice, "Please fill in every field.", "error");
+    if (!selectedSlot) return flash(formNotice, "Please tap a slot number above.", "error");
+    if (takenSlots.has(selectedSlot)) {
       flash(formNotice, "That slot was just taken — pick another.", "error");
       selectedSlot = null;
-      loadSlots();
-    } else {
-      flash(formNotice, "Something went wrong. Please try again.", "error");
-      console.error(error);
+      return loadSlots();
     }
-    return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Drawing…";
+
+    const month = months[Math.floor(Math.random() * months.length)];
+
+    const { error } = await supabase.from("registrations").insert({
+      name, phone, slot: selectedSlot, month
+    });
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Draw my month";
+
+    if (error) {
+      if (error.code === "23505") {
+        flash(formNotice, "That slot was just taken — pick another.", "error");
+        selectedSlot = null;
+        loadSlots();
+      } else {
+        flash(formNotice, "Something went wrong. Please try again.", "error");
+        console.error(error);
+      }
+      return;
+    }
+
+    userForm.classList.add("hidden");
+    result.classList.remove("hidden");
+    resultMonth.textContent = month;
+    resultName.textContent = name;
+    resultSlot.textContent = selectedSlot;
+    result.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  userForm.classList.add("hidden");
-  result.classList.remove("hidden");
-  resultMonth.textContent = month;
-  resultName.textContent = name;
-  resultSlot.textContent = selectedSlot;
-  result.scrollIntoView({ behavior: "smooth", block: "center" });
-}
+  function resetForm() {
+    userForm.classList.remove("hidden");
+    result.classList.add("hidden");
+    nameInput.value = phoneInput.value = "";
+    selectedSlot = null;
+    loadSlots();
+    userForm.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 
-function resetForm() {
-  userForm.classList.remove("hidden");
-  result.classList.add("hidden");
-  nameInput.value = phoneInput.value = "";
-  selectedSlot = null;
+  window.assignMonth = assignMonth;
+  window.resetForm = resetForm;
+  window.toggleTheme = toggleTheme;
+
   loadSlots();
-  userForm.scrollIntoView({ behavior: "smooth", block: "center" });
-}
 
-loadSlots();
+})();
 </script>
 </body>
 </html>
